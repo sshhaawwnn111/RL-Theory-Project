@@ -1,0 +1,16 @@
+\section{Introduction}
+\label{section:intro}
+
+\newcommand{\RNum}[1]{\uppercase\expandafter{\romannumeral #1\relax}}
+
+On a very general level, artificial intelligence addresses the problem of an agent that must select the right actions to solve a task.
+
+The approach of Reinforcement Learning is to learn the best actions by direct interaction with the environment and evaluation of the performance in the form of a reward signal. But often times the data available for training is a subset of all the cases of interest, which can be infinite. In this case we need stochastic sampling to approximate the expected performance of the unknown distribution.
+
+However randomness introduces variance that can potentially compromise convergence. So there is a trade-off between per-iteration efficiency and convergence that need to be properly handled with meta-parameters.
+
+Stochastic Variance-Reduced Policy Gradient(SVRPG) tackles the problem of variance by adapting Stochastic variance-reduced gradient(SVRG) in Supervised Learning(SL) to the settings of  Reinforcement Learning(RL). However the adaptation is not straightforward and needs to account for \RNum{1}) often non-concave objective function in RL problems;\RNum{2}) approximations in the full gradient computation;\RNum{3}) a non-stationary sampling process.
+
+Compared to prior works such as using baseline for variance reduction, SVRPG has a slight performance advantage over it, and they are orthogonal so they can be used jointly to boost the performance even further at the cost of more computational power.
+
+From the experiment results that they showed at the end, it seems like this method do have some really nice performance, but as we will see in section 4 that some assumptions have to be made for guarantee of convergence, which they say are common in a typical RL problem. While it might be true, it undeniably lowers the practicality of this method.

@@ -1,0 +1,87 @@
+\section{Theoretical Analysis}
+\label{section:analysis}
+
+The Full Gradient estimator $\widehat{\nabla}_N J\left(\theta \right)=\frac{1}{N}\sum_{n=1}^N g(\tau_i|\theta)$ is an unbiased estimator.
+
+\begin{proof}
+\begin{align*}
+    \mathop{{}\mathbb{E}}_{\tau \sim p(\cdot|\pi)}\left[\widehat{\nabla}_N J\left(\theta \right)\right] &= \mathop{{}\mathbb{E}}_{\tau \sim p(\cdot|\pi)}\left[\frac{1}{N}\sum_{n=1}^N g(\tau_i|\theta)\right]\\
+    &=\frac{1}{N}\sum_{n=1}^N \mathop{{}\mathbb{E}}_{\tau \sim p(\cdot|\pi)}\left[g(\tau_i|\theta)\right]\\
+    &=\frac{1}{N}\sum_{n=1}^N \nabla J\left(\theta \right)\\
+    &=\nabla J\left(\theta \right)
+\end{align*}
+\end{proof}
+
+The importance sampling term in the SVRPG has a the same expected value as the full gradient:
+
+\begin{proof}
+\begin{align*}
+    \mathop{{}\mathbb{E}}_{\tau_i \sim p(\cdot|\theta_t)}\left[\frac{1}{B}\sum_{i=0}^{B-1}\left[w(\tau_i|\theta_t, \tilde{\theta})g(\tau_i|\tilde{\theta}) \right]\right] &= \frac{1}{B}\sum_{i=0}^{B-1}\left[\mathop{{}\mathbb{E}}_{\tau_i \sim p(\cdot|\theta_t)}\left[w(\tau_i|\theta_t, \tilde{\theta})g(\tau_i|\tilde{\theta}) \right]\right]\\
+    &= \frac{1}{B}\sum_{i=0}^{B-1}\left[\sum_{\tau_i \in \tau}\left[p(\tau_i|\theta_t)w(\tau_i|\theta_t, \tilde{\theta})g(\tau_i|\tilde{\theta}) \right]\right]\\
+    &= \frac{1}{B}\sum_{i=0}^{B-1}\left[\sum_{\tau_i \in \tau}\left[p(\tau_i|\theta_t)\frac{p(\tau_i|\tilde{\theta})}{p(\tau_i|\theta_t)}g(\tau_i|\tilde{\theta}) \right]\right]\\
+    &= \frac{1}{B}\sum_{i=0}^{B-1}\left[\sum_{\tau_i \in \tau}\left[p(\tau_i|\tilde{\theta})g(\tau_i|\tilde{\theta}) \right]\right]\\
+    &= \frac{1}{B}\sum_{i=0}^{B-1}\left[\mathop{{}\mathbb{E}}_{\tau_i \sim p(\cdot|\tilde{\theta})}\left[p(\tau_i|\tilde{\theta})g(\tau_i|\tilde{\theta}) \right]\right]\\
+    &= \mathop{{}\mathbb{E}}_{\tau_i \sim p(\cdot|\tilde{\theta})}\left[p(\tau_i|\tilde{\theta})g(\tau_i|\tilde{\theta}) \right] = \nabla J(\tilde{\theta})
+\end{align*}
+where $\tau$ is the set of all possible trajectories.
+\end{proof}
+
+\newtheorem{lemma}{Lemma}
+
+\begin{lemma}\label{SVRGunbiasupdate}
+    With the unbiased estimator $\widehat{\nabla}_N J\left(\theta \right)$, the SVRPG update is an unbiased update:
+    $$\mathbb{E}\left[\widehat{\nabla}_N J(\tilde{\theta}) + \frac{1}{B}\sum_{i=0}^{B-1}\left[g(\tau_i|\theta_t) - w(\tau_i|\theta_t, \tilde{\theta})g(\tau_i|\tilde{\theta}) \right]\right] = \nabla J(\tilde{\theta}).$$
+    
+\begin{proof}
+
+    $$\mathbb{E}\left[\widetilde{\nabla} J(\theta_t)\right]=\mathbb{E}\left[\widehat{\nabla}_N J(\tilde{\theta}) + \frac{1}{B}\sum_{i=0}^{B-1}\left[g(\tau_i|\theta_t) - w(\tau_i|\theta_t, \tilde{\theta})g(\tau_i|\tilde{\theta}) \right]\right]$$
+    \begin{align*}
+    &= \mathbb{E}\left[\widehat{\nabla}_N J(\tilde{\theta})\right] + \mathbb{E}\left[\frac{1}{B}\sum_{i=0}^{B-1}\left[g(\tau_i|\theta_t)\right]\right]-\mathbb{E}\left[\frac{1}{B}\sum_{i=0}^{B-1}\left[w(\tau_i|\theta_t, \tilde{\theta})g(\tau_i|\tilde{\theta})\right]\right]\\
+    &= \nabla J(\tilde{\theta}) + \nabla J(\theta_t) - \nabla J(\tilde{\theta})\\
+    &= \nabla J(\theta_t)
+    \end{align*}
+\end{proof}
+
+\end{lemma}
+
+
+\newtheorem{theorem}{Theorem}
+\begin{theorem}\label{convergence}
+(Convergence of the SVRPG algorithm). Under Assumptions \ref{concavity}, \ref{estimator}, \ref{stationary}, the parameter $\theta$ returned by the algorithm has, for some positive constants $\psi, \zeta, \xi$, and for proper choice of the step size $\alpha$ and the epoch size m, the following property:
+$$\mathbb{E}\left[||\nabla J(\theta_A)||_2^2\right] < \frac{J(\theta^*)-J(\theta_0)}{\psi T} + \frac{\zeta}{N} + \frac{\xi}{B},$$
+where $\theta^*$ is a global optimum and $T=m\times S$, $\psi, \zeta, \xi$ depend only on
+$G, F, V, W, \alpha $ and m.
+\end{theorem}
+
+From this result we can see that the expected value of the gradient has an upper-bound $\frac{J(\theta^*)-J(\theta_0)}{\psi T}+\frac{\zeta}{N}+\frac{\xi}{B}$ that must converge to 0. From observation we can see that there are 3 big O terms $O(\frac{1}{T}),O(\frac{1}{N}),O(\frac{1}{B})$.
+
+\RNum{1}) $O(\frac{1}{T})$ is intuitive in a sense that the more iteration you compute the closer it gets to 0, the better the result. It is also coherent with prior works on convergence of non-concave SVRG (e.g., \cite{reddi2016stochastic}). \RNum{2}) $O(\frac{1}{N})$ is due to the $N$ sampled trajectory to do full gradient approximation at the start of every epoch, intuitively the more trajectories you sample the less variance in the approximation. \RNum{3}) $O(\frac{1}{B})$ is due to the importance sampling. Recall that we used the average of a mini-batch in every iteration to mitigate the effect of variance introduced by importance sampling, similarly the bigger the mini-batch the less variance.
+
+
+As mentioned above, at the very start of each epoch is a full gradient approximation, since $\theta_{t=0} = \tilde{\theta}$, the B trajectories sampled in the first iteration of every epoch seems like a waste, so here is the updated, more practical version of Eq .(\ref{eq:svrpg}):
+
+$$\theta_1 = \tilde{\theta}+\eta\widehat{\nabla}_N J(\tilde{\theta})$$
+
+$$\theta_t = \theta_{t-1}+\eta\left(\widehat{\nabla}_N J(\tilde{\theta})+\frac{1}{B}\sum_{i=0}^{B-1}\left[g(\tau_i|\theta_t)-w(\tau_i|\theta_t,\tilde{\theta})g(\tau_i|\tilde{\theta}) \right]\right) \;\;\;for \;t=2,\ldots,m,$$
+
+Combining everything together, we have the SVRPG algorithm:
+\begin{algorithm}
+  \caption{Stochastic Variance-Reduced Policy Gradient}\label{algo1}
+  \KwIn{number of epochs $S$, epoch size m, step size $\alpha$,
+batch size $N$, mini-batch size $B$, gradient estimator $g$,
+initial parameter $\theta_m^0 := \tilde{\theta}^0$}
+  \For{$s=0$ to $S-1$ do}{
+      $\tilde{\theta}^s := \theta_m^s$\\
+      $\theta_0^{s+1} := \tilde{\theta}^s$\\
+      Sample $N$ trajectories ${\tau_i}$ from $p(\cdot|\tilde{\theta}^s)$\\
+      $\tilde{u}=\widehat{\nabla}_N J(\tilde{\theta}^s)$ see Eq. (\ref{eq:gradient estimate})\\
+       \For{$t=1$ to m do}{
+           \uIf{$t=1$}{
+            $\theta_t = \tilde{\theta}+\eta\widehat{\nabla}_N J(\tilde{\theta})$
+            }
+           \Else{
+            $\theta_t = \theta_{t-1}+\eta\left(\widehat{\nabla}_N J(\tilde{\theta})+\frac{1}{B}\sum_{i=0}^{B-1}\left[g(\tau_i|\theta_t)-w(\tau_i|\theta_t,\tilde{\theta})g(\tau_i|\tilde{\theta}) \right]\right)$
+           }
+       }
+  }
+\end{algorithm}

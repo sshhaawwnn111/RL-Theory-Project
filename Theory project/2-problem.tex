@@ -1,0 +1,101 @@
+\section{Problem Formulation}
+\label{section:problem}
+
+\subsection{Policy Gradient}
+\label{section:pg}
+
+
+A Reinforcement Learning task can be modeled with a \emph{Markov decision process}(MDP) $M=\left(S,A,P,R,\gamma,\rho \right)$ where $S$ is a continuous state space; $A$ is a continuous action space; $P$ is a Markovian transition model; $R$ is the reward function; $\gamma \in [0, 1)$
+is the discount factor; $\rho$ is the initial state distribution. The agent’s behaviour is modeled as a policy $\pi$, where $\pi(\cdot|s)$ is the density distribution over A in state s. A trajectory $\tau$ is a sequence of states and actions $\left(s_0,a_0,r_0,s_1,a_1,r_1,\ldots\right)$ observed by following a stationary policy where $s_o \sim \rho$. We denote the density distribution of all the trajectories induced by policy $\pi$ as $p(\tau|\pi)$, and with $R(\tau)$ the total discounted reward of a trajectory $\tau$. From the above notation we can rank the policies with there expected total reward:
+
+\begin{equation}
+  \label{eq:expectedreward}
+  J\left(\pi\right)=\mathop{{}\mathbb{E}}_{\tau \sim p(\cdot|\pi)}\left[R(\tau)\right]
+\end{equation}
+
+We denote the parameter of a policy net $\theta \sim \mathbb{R}^d$. The performance of this parameter will be denoted by $J(\theta)$ and the probability of a trajectory $p(\cdot|\theta)$. From here we have the gradient of $J(\theta)$ w.r.t $\theta$ as:
+
+\begin{equation}
+  \label{eq:gradient}
+  \nabla J\left(\pi\right)=\mathop{{}\mathbb{E}}_{\tau \sim p(\cdot|\pi)}\left[R(\tau) \nabla \log{p_\theta(\tau)} \right]
+\end{equation}
+
+Because the underlying distribution of trajectories changes overtime, it is necessary to resample at each update or use techniques like importance weight. In the case of resampling, stochastic gradient descent is typically used. At each iteration $k > 0$, a batch $D_N^k=\{\tau_i\}_{i=0}^N$ of $N > 0$ is collected using $\pi_{\theta_k}$. The policy is then updated as $\theta_{k+1}=\theta_k + \alpha \widehat{\nabla}_N J(\theta_k)$ where $\alpha$ is the step size and $\widehat{\nabla}_N J(\theta)$ is an estimate of Eq.(\ref{eq:gradient}) using $D_N^k$:
+
+\begin{equation}
+  \label{eq:gradient estimate}
+  \widehat{\nabla}_N J\left(\theta \right)=\frac{1}{N}\sum_{n=1}^N g(\tau_i|\theta),\;\;\;\;\tau_i \in D_N^k
+\end{equation}
+
+$g(\tau|\theta)$ is an estimator of $R(\tau) \nabla \log{p_\theta(\tau)}$ using either the REINFORCE or G(PO)MDP definition.
+
+\subsection{ Stochastic Variance-Reduced Gradient}
+\label{section:svrg}
+The optimization problem of maximize or minimize a finite-sum objective function $f(\theta)$ can be written as:
+
+\begin{equation}
+  \label{eq:objective}
+  \max_\theta\bigg\{f(\theta)=\frac{1}{N}\sum_{i=1}^N z_i(\theta)\bigg\}
+\end{equation}
+
+where each $z_i$ may correspond to a data sample $x_i$ from a dataset $D_N$ of size $N$ (i.e, $z_i(\theta) = z(x_i|\theta)$) where $x_i$ is sampled uniformly at random from $D_N$. A common requirement is that z must be smooth and concave in $\theta$. However, each iteration requires N gradient computations, which can be a heavy loading for large values of N. This is where  Stochastic Gradient Descent(SGD) comes into play, but with lower computation cost comes variance that could tamper with the convergence of the algorithm. SVRG deals with this problem by updating with the following rule:
+
+\begin{equation}
+  \label{eq:svrg}
+  \theta_t = \theta_{t-1} - \eta \left(\nabla z_i(\theta_{t-1}) - \nabla z_i(\tilde{\theta}) + \nabla f(\tilde{\theta})\right)
+\end{equation}
+
+where $\tilde{\theta}$ is a snapshot of the parameter that is updated every m SGD iterations.
+
+If the snapshot $\tilde{\theta}$ is close to optimal(denote with $\theta^*$),  $\nabla z_i(\tilde{\theta}) \rightarrow \nabla z_i(\theta^*)$:
+\begin{itemize}
+    \item Let $\tilde{u}:=\nabla f(\tilde{\theta})$, \;$\tilde{u}-\nabla f(\theta_{t-1}) \approx \nabla z_i(\tilde{\theta}) - \nabla z_i(\theta_{t-1})$
+    
+    \item Updating with $\nabla f(\theta_{t-1}) = \nabla f(\theta_{t-1})-\tilde{u}+\tilde{u} \approx \nabla z_i(\theta_{t-1}) - \nabla z_i(\tilde{\theta})+\tilde{u}$.\\
+    Intuitively, this updating rule cancel the randomness induced by random sampling.
+    
+    \item $\tilde{u} \rightarrow 0$ when $\tilde{\theta} \rightarrow \theta^*$, \;$\nabla z_i(\theta_{t-1}) - \nabla z_i(\tilde{\theta}) + \tilde{u} \rightarrow \nabla z_i(\theta_{t-1}) - \nabla z_i(\theta^*) \rightarrow 0$.\\
+    The infinite small gradient allows to use constant learning rate.
+\end{itemize}
+
+Now, in order to apply this into an RL setting, there are three problems that need to be handled as mentioned in the introduction.
+
+\begin{enumerate}
+    \item Non-concavity: Assumes the objective function $J(\theta)$ is L-smooth. However, the following assumption is sufficient
+    
+    \newtheorem{assumption}{Assumption}
+    \begin{assumption}\label{concavity}
+    (On policy derivatives). For each state-action pair $(s, a)$, any value of $\theta$, and all parameter components i, j there exist constants $0 \leq G, F < \infty$ such that:
+    $$|\nabla_{\theta_i} \log{\pi_\theta(a|s)}| \leq G, \;\;\;\;\;\;\; |\frac{\partial^2}{\partial\theta_i \partial\theta_j}\log{\pi_\theta(a|s)}|\leq F .$$
+    
+    \end{assumption}
+    
+    \item Infinite dataset: This mean we can only use an estimate of the full gradient in the algorithm(see Eq. (\ref{eq:gradient estimate})), and others works (e.g., \cite{babanezhad2015stopwasting})  analyzed this under the assumption of z being concave, shows that SVRG is robust under the error of estimation. But for the sake of convergence we still need the variance of the estimator to be bounded.
+    
+    \begin{assumption}\label{estimator}
+    (On the variance of the gradient estimator). There is a constant $V < \infty$ such that, for any policy $\pi_\theta$:
+    $$\mathbb{V}ar\left[g(\cdot|\theta)\right] \leq V.$$
+    
+    \end{assumption}
+    
+    
+    \item Non-stationarity: This is solved using the importance rate, thus eliminating the need for resampling. We need the variance introduced by this technique to be bounded.
+    
+    \begin{assumption}\label{stationary}
+    (On the variance of importance weights). There is a constant $W < \infty$ such that, for each pair of policies encountered and for each trajectory:
+    $$\mathbb{V}ar\left[w(\tau|\theta_1, \theta_2)\right] \leq W, \;\;\;\;\; \forall \theta_1, \theta_2 \in \mathbb{R}^d, \tau \sim p(\cdot|\theta_1).$$
+    \end{assumption}
+    
+\end{enumerate}
+
+Finally, we have the SVRG in RL with the updating rule:
+
+\begin{equation}
+  \label{eq:svrpg}
+  \theta_t = \theta_{t-1} + \eta\left(\widehat{\nabla}_N J(\tilde{\theta}) + \frac{1}{B}\sum_{i=0}^{B-1}\left[g(\tau_i|\theta_t) - w(\tau_i|\theta_t, \tilde{\theta})g(\tau_i|\tilde{\theta}) \right]\right)
+\end{equation}
+
+Where $\widehat{\nabla}_N J(\tilde{\theta})$ is the same as Eq. (\ref{eq:gradient estimate}). $\tilde{\theta}$ is the snapshot of the parameter that is updated every m SGD. $w$ is the importance weight where $w(\tau_i|\theta_t, \tilde{\theta})=\frac{p(\tau|\tilde{\theta})}{p(\tau|\theta_t)}$.
+
+As we know the importance sampling is another source of variance (e.g.,\cite{thomas2015high}), to mitigate this, we used a mini-batch $B \ll N$ to average the correction term (e.g., \cite{babanezhad2015stopwasting};\cite{avdiukhin2021federated}), we denote this update with:
+$$\widetilde{\nabla} J(\theta_t)=\widehat{\nabla}_N J(\tilde{\theta}) + \frac{1}{B}\sum_{i=0}^{B-1}\left[g(\tau_i|\theta_t) - w(\tau_i|\theta_t, \tilde{\theta})g(\tau_i|\tilde{\theta}) \right]$$

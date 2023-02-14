@@ -1,0 +1,5 @@
+\section{Conclusion}
+\label{section:conclusion}
+SVRPG provides a way of reducing variance in RL problem, where interacting with the environment and collecting data is very costly, accomplishing a better performance under limited resource, moreover, it can be combined with the traditional baseline variance reduction method. Although there is quite a bit of assumptions made in order to achieve convergence guarantee, they are reasonable assumptions and can be met by most RL problems in my opinion. Finally, experiment empirically shows that SVRPG does have a noticeable advantage over traditional actor-only methods.
+
+There is still, thing that can improve SVRPG even further that I have not discuss in this paper such as adaptive step size and adaptive epoch length. Or lower the variance by normalizing the importance weight (e.g., \cite{tirinzoni2019transfer}) at the cost of some bias. Future direction may consider of applying this to an actor-critic framework, replacing $g(\tau|\theta)$ with an approximation by the critic.
